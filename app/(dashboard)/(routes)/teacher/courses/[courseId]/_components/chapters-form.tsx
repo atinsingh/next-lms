@@ -28,6 +28,7 @@ export const ChaptersForm = ({ initialData, courseId }: ChaptersFormProps) => {
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
 
+  // Initial data logging removed for production
   const toggleCreating = () => {
     setIsCreating((current) => !current)
   }
@@ -44,6 +45,7 @@ export const ChaptersForm = ({ initialData, courseId }: ChaptersFormProps) => {
   const { isSubmitting, isValid } = form.formState
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    // Form values logging removed for production
     try {
       await axios.post(`/api/courses/${courseId}/chapters`, values)
       toast.success('Chapter created')

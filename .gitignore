@@ -38,3 +38,5 @@ next-env.d.ts
 
 # docker compose
 db-data
+# clerk configuration (can include secrets)
+/.clerk/

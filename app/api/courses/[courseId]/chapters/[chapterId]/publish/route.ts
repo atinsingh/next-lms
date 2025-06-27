@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 type Params = Promise<{ chapterId: string; courseId: string }>
 
 export async function PATCH(req: NextRequest, { params }: { params: Params }) {
+  // console.log(req, 'patch request')
   try {
     const { chapterId, courseId } = await params
     const { userId } = await auth()

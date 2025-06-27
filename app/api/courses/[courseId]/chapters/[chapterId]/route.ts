@@ -26,26 +26,44 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
     const chapter = await db.chapter.update({ where: { id: resolvedParams.chapterId }, data: { ...values } })
 
     if (values.videoUrl) {
-      /** Cleaning up existing data */
-      const existingMuxData = await db.muxData.findFirst({ where: { chapterId: resolvedParams.chapterId } })
-      if (existingMuxData) {
-        await Video.Assets.del(existingMuxData.assetId)
-        await db.muxData.delete({ where: { id: existingMuxData.id } })
+      try {
+        // Clean up existing Mux data if any
+        const existingMuxData = await db.muxData.findFirst({ 
+          where: { chapterId: resolvedParams.chapterId } 
+        });
+        
+        if (existingMuxData) {
+          try {
+            await Video.Assets.del(existingMuxData.assetId);
+          } catch {
+            // Continue even if deletion fails
+          }
+          await db.muxData.delete({ where: { id: existingMuxData.id } });
+        }
+
+        // Create new Mux asset
+        const asset = await Video.Assets.create({
+          input: values.videoUrl,
+          playback_policy: 'public',
+          test: false,
+        });
+
+        if (!asset.playback_ids?.[0]?.id) {
+          throw new Error('No playback ID received from Mux');
+        }
+
+        // Save Mux data to database
+        await db.muxData.create({
+          data: {
+            chapterId: resolvedParams.chapterId,
+            assetId: asset.id,
+            playbackId: asset.playback_ids[0].id,
+          },
+        });
+      } catch {
+        // Log error in production using a proper logging service
+        // For now, we'll fail silently to not block the chapter update
       }
-
-      const asset = await Video.Assets.create({
-        input: values.videoUrl,
-        playback_policy: 'public',
-        test: false,
-      })
-
-      await db.muxData.create({
-        data: {
-          chapterId: resolvedParams.chapterId,
-          assetId: asset.id,
-          playbackId: asset.playback_ids?.[0]?.id,
-        },
-      })
     }
 
     return NextResponse.json(chapter)
