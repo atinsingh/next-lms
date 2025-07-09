@@ -6,6 +6,12 @@ const f = createUploadthing()
 
 const handleAuth = async () => {
   const { userId } = await auth()
+  if (!userId) throw new Error('Unauthorized')
+  return { userId }
+}
+
+const handleTeacherAuth = async () => {
+  const { userId } = await auth()
   const isAuthorized = isTeacher(userId)
 
   if (!userId || !isAuthorized) throw new Error('Unauthorized')
@@ -14,13 +20,21 @@ const handleAuth = async () => {
 
 export const ourFileRouter = {
   courseImage: f({ image: { maxFileSize: '4MB', maxFileCount: 1 } })
-    .middleware(() => handleAuth())
+    .middleware(() => handleTeacherAuth())
     .onUploadComplete(() => {}),
-  courseAttachment: f(['text', 'image', 'video', 'audio', 'pdf'])
+  courseAttachment: f({
+    pdf: { maxFileSize: '16MB', maxFileCount: 10 },
+    image: { maxFileSize: '8MB', maxFileCount: 10 },
+    video: { maxFileSize: '512MB', maxFileCount: 5 },
+    audio: { maxFileSize: '32MB', maxFileCount: 10 },
+    text: { maxFileSize: '4MB', maxFileCount: 10 },
+    blob: { maxFileSize: '128MB', maxFileCount: 5 },
+
+  })
     .middleware(() => handleAuth())
     .onUploadComplete(() => {}),
   chapterVideo: f({ video: { maxFileCount: 1, maxFileSize: '512GB' } })
-    .middleware(() => handleAuth())
+    .middleware(() => handleTeacherAuth())
     .onUploadComplete(() => {}),
 } satisfies FileRouter
 

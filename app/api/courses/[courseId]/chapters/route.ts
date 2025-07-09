@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server'
+import type { RouteHandler } from '@/types/routes';
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { isTeacher } from '@/lib/teacher'

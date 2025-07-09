@@ -38,13 +38,24 @@ model Attachment {
   name String
   url  String
 
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  courseId String
+  // Course relation (for course materials)
+  course   Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId String?
+
+  // Assignment relation (for assignment files)
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignmentId String?
+
+  // Submission relation (for submission files)
+  submission   Submission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([courseId])
+  @@index([assignmentId])
+  @@index([submissionId])
 }
 
 model Chapter {
@@ -56,10 +67,11 @@ model Chapter {
   isPublished Boolean @default(false)
   isFree      Boolean @default(false)
 
-  course       Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  courseId     String
-  muxData      MuxData?
-  userProgress UserProgress[]
+  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId      String
+  muxData       MuxData?
+  userProgress  UserProgress[]
+  assignments   Assignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,6 +111,41 @@ model Purchase {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, courseId])
+}
+
+model Assignment {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  points      Int        @default(100)
+  isPublished Boolean    @default(false)
+  
+  chapter     Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapterId   String
+  
+  attachments Attachment[]
+  submissions Submission[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Submission {
+  id          String     @id @default(cuid())
+  userId      String
+  grade       Int?
+  feedback    String?
+  submittedAt DateTime   @default(now())
+  
+  assignment  Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignmentId String
+  
+  attachments Attachment[]
+  
+  updatedAt   DateTime   @updatedAt
+  
+  @@unique([userId, assignmentId])
 }
 
 model StripeCustomer {

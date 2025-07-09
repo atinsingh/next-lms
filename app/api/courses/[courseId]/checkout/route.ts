@@ -1,4 +1,5 @@
 import { currentUser } from '@clerk/nextjs/server'
+import type { RouteHandler } from '@/types/routes';
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { db } from '@/lib/db'

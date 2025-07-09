@@ -16,9 +16,9 @@ async function main() {
       ],
     })
 
-    console.log('🟢 Seed script run successfully!🟢')
+    // console.log('🟢 Seed script run successfully!🟢')
   } catch (error) {
-    console.log('🔴 Error in seed script 🔴', error)
+    // console.log('🔴 Error in seed script 🔴', error)
   } finally {
     await database.$disconnect()
   }

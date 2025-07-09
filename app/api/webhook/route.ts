@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { RouteHandler } from '@/types/routes';
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'

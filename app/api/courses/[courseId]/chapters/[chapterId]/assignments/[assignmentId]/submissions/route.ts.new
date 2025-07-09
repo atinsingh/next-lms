@@ -1,0 +1,156 @@
+import { NextRequest } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { db } from '@/lib/db';
+import { getUserInfo } from '@/app/actions/users';
+import { responses } from '@/lib/api-response';
+
+// GET submissions for an assignment
+// - Teacher/course owner: gets all submissions
+// - Student: gets their own submission
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { courseId: string; chapterId: string; assignmentId: string } }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return responses.unauthorized('You must be logged in to view submissions');
+    }
+
+    // Check if the user is the course owner
+    const isOwner = await db.course.findUnique({
+      where: { id: params.courseId, createdById: userId },
+      select: { id: true },
+    });
+
+    if (isOwner) {
+      // Get all submissions for this assignment with attachments
+      const submissions = await db.submission.findMany({
+        where: { 
+          assignmentId: params.assignmentId,
+          assignment: { chapterId: params.chapterId }
+        },
+        include: { attachments: true },
+        orderBy: { submittedAt: 'desc' }
+      });
+      
+      // Add user info to each submission
+      const submissionsWithUserInfo = await Promise.all(
+        submissions.map(async (submission) => {
+          try {
+            const userInfo = await getUserInfo(submission.userId);
+            return { ...submission, user: userInfo };
+          } catch (error) {
+            console.error(`Error fetching user info for submission ${submission.id}:`, error);
+            return { ...submission, user: null };
+          }
+        })
+      );
+
+      return responses.ok(submissionsWithUserInfo);
+    }
+
+    // For students, return only their submission
+    const userSubmission = await db.submission.findFirst({
+      where: {
+        assignmentId: params.assignmentId,
+        userId: userId,
+        assignment: { chapterId: params.chapterId }
+      },
+      include: { attachments: true }
+    });
+
+    if (!userSubmission) {
+      return responses.notFound('No submission found for this assignment');
+    }
+
+    // Add user info to the submission
+    try {
+      const userInfo = await getUserInfo(userId);
+      return responses.ok({ ...userSubmission, user: userInfo });
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+      return responses.ok({ ...userSubmission, user: null });
+    }
+  } catch (error) {
+    console.error('Error in GET /api/courses/[courseId]/chapters/[chapterId]/assignments/[assignmentId]/submissions:', error);
+    return responses.internalServerError();
+  }
+}
+
+// Create or update a submission
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { courseId: string; chapterId: string; assignmentId: string } }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return responses.unauthorized('You must be logged in to submit an assignment');
+    }
+
+    const { content, attachments } = await req.json();
+
+    // Validate input
+    if (!content && (!attachments || attachments.length === 0)) {
+      return responses.badRequest('Either content or attachments must be provided');
+    }
+
+    // Check if the assignment exists and is in the correct chapter/course
+    const assignment = await db.assignment.findUnique({
+      where: {
+        id: params.assignmentId,
+        chapterId: params.chapterId,
+        chapter: { courseId: params.courseId }
+      },
+      select: { id: true }
+    });
+
+    if (!assignment) {
+      return responses.notFound('Assignment not found');
+    }
+
+    // Create or update the submission
+    const submission = await db.submission.upsert({
+      where: {
+        userId_assignmentId: {
+          userId,
+          assignmentId: params.assignmentId
+        }
+      },
+      update: {
+        content,
+        submittedAt: new Date()
+      },
+      create: {
+        content,
+        userId,
+        assignmentId: params.assignmentId
+      },
+      include: { attachments: true }
+    });
+
+    // Handle attachments if provided
+    if (attachments && attachments.length > 0) {
+      await db.attachment.createMany({
+        data: attachments.map((attachment: any) => ({
+          name: attachment.name,
+          url: attachment.url,
+          type: attachment.type,
+          submissionId: submission.id
+        }))
+      });
+    }
+
+    // Return the updated submission with attachments
+    const updatedSubmission = await db.submission.findUnique({
+      where: { id: submission.id },
+      include: { attachments: true }
+    });
+
+    return responses.created(updatedSubmission);
+  } catch (error) {
+    console.error('Error in POST /api/courses/[courseId]/chapters/[chapterId]/assignments/[assignmentId]/submissions:', error);
+    return responses.internalServerError();
+  }
+}

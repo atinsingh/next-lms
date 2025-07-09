@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-const publicRoutes = ['/api/webhook']
+const publicRoutes = ['/api/webhook', '/api/uploadthing']
 const isPublicRoute = createRouteMatcher(publicRoutes)
 
 const protectedRoutes = ['/', '/(api|trpc)']

@@ -1,4 +1,4 @@
-import { Attachment, Chapter } from '@prisma/client'
+import { Attachment, Chapter, Assignment } from '@prisma/client'
 import { db } from '@/lib/db'
 
 type GetChapterArgs = {
@@ -44,16 +44,29 @@ export async function getChapter({ userId, courseId, chapterId }: GetChapterArgs
       nextChapter,
       userProgress,
       purchase,
+      assignments: purchase ? await db.assignment.findMany({
+        where: {
+          chapterId: chapter.id,
+          isPublished: true,
+        },
+        include: {
+          attachments: true,
+        },
+        orderBy: {
+          position: 'asc',
+        },
+      }) : [],
     }
   } catch {
     return {
       chapter: null,
       course: null,
       muxData: null,
-      attachments: null,
+      attachments: [],
       nextChapter: null,
       userProgress: null,
       purchase: null,
+      assignments: [],
     }
   }
 }

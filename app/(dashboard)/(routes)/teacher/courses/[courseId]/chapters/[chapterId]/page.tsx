@@ -6,6 +6,7 @@ import { ArrowLeft, Eye, LayoutDashboard, Video } from 'lucide-react'
 import { db } from '@/lib/db'
 import { IconBadge } from '@/components/icon-badge'
 import { Banner } from '@/components/banner'
+import { AssignmentSubmissions } from './_components/assignment-submissions'
 
 import { ChapterTitleForm } from './_components/chapter-title-form'
 import { ChapterDescriptionForm } from './_components/chapter-description-form'
@@ -35,13 +36,18 @@ const ChapterIdPage = async ({ params }: ChapterIdPageProps) => {
     },
     include: {
       muxData: true,
+      assignments: {
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
     },
   })
 
   if (!chapter) {
     return redirect('/')
   }
-
+    // console.log(chapter, 'chapter data in teacher chapter page')
   const requiredFields = [chapter.title, chapter.description, chapter.videoUrl]
 
   const totalFields = requiredFields.length
@@ -122,6 +128,12 @@ const ChapterIdPage = async ({ params }: ChapterIdPageProps) => {
             />
           </div>
         </div>
+        
+        {/* Assignment Submissions Section */}
+        <AssignmentSubmissions 
+          courseId={resolvedParams.courseId}
+          chapterId={resolvedParams.chapterId}
+        />
       </div>
     </>
   )
